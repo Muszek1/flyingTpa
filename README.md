@@ -1,24 +1,50 @@
-Working with template:
------
-Take a loot at [Dream-Otchlan](https://github.com/DreamPoland/dream-otchlan), example project based on platform.
+# 🪂 flyingDrop
 
-**Required:**
------
-- Spigot-api 1.8.8 with NMS support.
-- JDK 21, target 1.8 for compatibility.
+**flyingDrop** is a Minecraft plugin that adds new mechanics for item drops and events on your server.  
+It is designed to be lightweight, easy to configure, and fun for players.  
 
-------
+---
 
-**Libraries**: <33
-- [Dream-Platform](https://github.com/DreamPoland/dream-platform) by [DreamCode](https://github.com/DreamPoland)
-- [Dream-Menu](https://github.com/DreamPoland/dream-menu) by [DreamCode](https://github.com/DreamPoland)
-- [Dream-Command](https://github.com/DreamPoland/dream-command) by [DreamCode](https://github.com/DreamPoland)
-- [Dream-Notice](https://github.com/DreamPoland/dream-notice) by [DreamCode](https://github.com/DreamPoland)
-- [Dream-Utilities](https://github.com/DreamPoland/dream-utilities) by [DreamCode](https://github.com/DreamPoland)
-- [Okaeri-Configs](https://github.com/OkaeriPoland/okaeri-configs) by [Okaeri](https://github.com/OkaeriPoland)
-- [Okaeri-Persistence](https://github.com/OkaeriPoland/okaeri-persistence) by [Okaeri](https://github.com/OkaeriPoland)
-- [Okaeri-Injector](https://github.com/OkaeriPoland/okaeri-injector) by [Okaeri](https://github.com/OkaeriPoland)
-- [Okaeri-Placeholders](https://github.com/OkaeriPoland/okaeri-placeholders) by [Okaeri](https://github.com/OkaeriPoland)
-- [Okaeri-Tasker](https://github.com/OkaeriPoland/okaeri-tasker) by [Okaeri](https://github.com/OkaeriPoland)
-- [XSeries](https://github.com/CryptoMorin/XSeries) by [CryptoMorin](https://github.com/CryptoMorin)
-- and [Lombok](https://github.com/projectlombok/lombok) for clean dev by [ProjectLombok](https://github.com/projectlombok)
+## ✨ Features
+- Custom drop system (configurable in YAML).
+- Event-driven mechanics.
+- Lightweight and optimized for survival servers.
+- Easy to use commands and permissions.
+
+---
+
+## 📦 Installation
+1. Download the latest release from [Releases](https://github.com/Muszek1/flyingDrop/releases).
+2. Place the `.jar` file into your server’s `plugins` folder.
+3. Restart or reload your server.
+4. Configure the plugin in `plugins/flyingDrop/config.yml`.
+
+---
+
+## 🛠 Commands
+| Command | Description |
+|---------|-------------|
+| `/flyingdrop reload` | Reloads the plugin configuration. |
+| *(add here other commands when available)* |
+
+---
+
+## 🔑 Permissions
+| Permission | Description |
+|------------|-------------|
+| `flyingdrop.reload` | Allows reloading the configuration. |
+| *(add here other permissions when available)* |
+
+---
+
+## ⚙️ Configuration
+The plugin uses a YAML configuration file (`config.yml`).  
+Example:
+```yaml
+# Example configuration
+drops:
+  enabled: true
+  chance: 0.25
+  items:
+    - DIAMOND
+    - GOLD_INGOT

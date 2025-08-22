@@ -1,4 +1,4 @@
-package cc.dreamcode.template;
+package cc.dreamcode.tpa;
 
 import cc.dreamcode.command.bukkit.BukkitCommandProvider;
 import cc.dreamcode.menu.bukkit.BukkitMenuProvider;
@@ -15,16 +15,16 @@ import cc.dreamcode.platform.other.component.DreamCommandExtension;
 import cc.dreamcode.platform.persistence.DreamPersistence;
 import cc.dreamcode.platform.persistence.component.DocumentPersistenceResolver;
 import cc.dreamcode.platform.persistence.component.DocumentRepositoryResolver;
-import cc.dreamcode.template.command.ExampleCommand;
-import cc.dreamcode.template.command.handler.InvalidInputHandlerImpl;
-import cc.dreamcode.template.command.handler.InvalidPermissionHandlerImpl;
-import cc.dreamcode.template.command.handler.InvalidSenderHandlerImpl;
-import cc.dreamcode.template.command.handler.InvalidUsageHandlerImpl;
-import cc.dreamcode.template.command.result.BukkitNoticeResolver;
-import cc.dreamcode.template.config.MessageConfig;
-import cc.dreamcode.template.config.PluginConfig;
-import cc.dreamcode.template.nms.api.VersionProvider;
-import cc.dreamcode.template.profile.ProfileRepository;
+import cc.dreamcode.tpa.command.*;
+import cc.dreamcode.tpa.command.handler.InvalidInputHandlerImpl;
+import cc.dreamcode.tpa.command.handler.InvalidPermissionHandlerImpl;
+import cc.dreamcode.tpa.command.handler.InvalidSenderHandlerImpl;
+import cc.dreamcode.tpa.command.handler.InvalidUsageHandlerImpl;
+import cc.dreamcode.tpa.command.result.BukkitNoticeResolver;
+import cc.dreamcode.tpa.config.MessageConfig;
+import cc.dreamcode.tpa.config.PluginConfig;
+import cc.dreamcode.tpa.profile.ProfileRepository;
+import cc.dreamcode.tpa.service.TpaService;
 import cc.dreamcode.utilities.adventure.AdventureProcessor;
 import cc.dreamcode.utilities.adventure.AdventureUtil;
 import cc.dreamcode.utilities.bukkit.StringColorUtil;
@@ -37,9 +37,9 @@ import lombok.NonNull;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-public final class TemplatePlugin extends DreamBukkitPlatform implements DreamBukkitConfig, DreamPersistence {
+public final class Tpa extends DreamBukkitPlatform implements DreamBukkitConfig, DreamPersistence {
 
-    @Getter private static TemplatePlugin instance;
+    @Getter private static Tpa instance;
 
     @Override
     public void load(@NonNull ComponentService componentService) {
@@ -59,10 +59,10 @@ public final class TemplatePlugin extends DreamBukkitPlatform implements DreamBu
         this.registerInjectable(BukkitCommandProvider.create(this));
         componentService.registerExtension(DreamCommandExtension.class);
 
-        this.registerInjectable(VersionProvider.getVersionAccessor());
 
         componentService.registerResolver(ConfigurationResolver.class);
         componentService.registerComponent(MessageConfig.class);
+
 
         componentService.registerComponent(BukkitNoticeResolver.class);
         componentService.registerComponent(InvalidInputHandlerImpl.class);
@@ -82,8 +82,16 @@ public final class TemplatePlugin extends DreamBukkitPlatform implements DreamBu
             componentService.setDebug(pluginConfig.debug);
         });
 
+        componentService.registerComponent(TpaService.class);
         componentService.registerComponent(ProfileRepository.class);
-        componentService.registerComponent(ExampleCommand.class);
+        componentService.registerComponent(TpaCommand.class);
+        componentService.registerComponent(TpAcceptCommand.class);
+        componentService.registerComponent(TpaHereCommand.class);
+        componentService.registerComponent(TpCancelCommand.class);
+        componentService.registerComponent(TpDenyCommand.class);
+        componentService.registerComponent(TpaReloadCommand.class);
+        componentService.registerComponent(cc.dreamcode.tpa.listener.TpaListener.class);
+
     }
 
     @Override
@@ -93,7 +101,7 @@ public final class TemplatePlugin extends DreamBukkitPlatform implements DreamBu
 
     @Override
     public @NonNull DreamVersion getDreamVersion() {
-        return DreamVersion.create("Dream-Template", "1.0-InDEV", "author");
+        return DreamVersion.create("Dream-Tpa", "1.0-InDEV", "Muszek_");
     }
 
     @Override

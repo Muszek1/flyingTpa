@@ -1,4 +1,4 @@
-package cc.dreamcode.template.profile;
+package cc.dreamcode.tpa.profile;
 
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.persistence.document.Document;
