@@ -1,4 +1,4 @@
-package cc.dreamcode.template.command.result;
+package cc.dreamcode.tpa.command.result;
 
 import cc.dreamcode.command.DreamSender;
 import cc.dreamcode.command.bukkit.BukkitSender;

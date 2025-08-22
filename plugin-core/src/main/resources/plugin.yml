@@ -1,7 +1,7 @@
-main: "cc.dreamcode.template.TemplatePlugin"
-version: "1.0-InDEV"
-name: "Dream-Template"
-description: "Dream-Template plugin written by dreamcode.cc"
+main: "cc.dreamcode.tpa.Tpa"
+version: "1.0-beta.1"
+name: "Dream-Tpa"
+description: "Dream-Tpa plugin written by dreamcode.cc"
 website: "https://dreamcode.cc"
-author: "author"
+author: "Muszek_"
 api-version: 1.13

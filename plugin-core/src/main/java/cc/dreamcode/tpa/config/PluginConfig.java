@@ -1,4 +1,4 @@
-package cc.dreamcode.template.config;
+package cc.dreamcode.tpa.config;
 
 import cc.dreamcode.platform.bukkit.component.configuration.Configuration;
 import cc.dreamcode.platform.persistence.StorageConfig;
@@ -8,7 +8,7 @@ import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
 
 @Configuration(child = "config.yml")
-@Header("## Dream-Template (Main-Config) ##")
+@Header("## Dream-Tpa (Main-Config) ##")
 public class PluginConfig extends OkaeriConfig {
 
     @Comment
@@ -20,4 +20,19 @@ public class PluginConfig extends OkaeriConfig {
     @Comment("Ponizej znajduja sie dane do logowania bazy danych:")
     @CustomKey("storage-config")
     public StorageConfig storageConfig = new StorageConfig("dreamtemplate");
+
+    @Comment("Czas (sek) po jakim prośba TPA wygasa")
+    public int requestExpireSeconds = 60;
+
+    @Comment("Opóźnienie (sek) przed teleportacją po akceptacji (anty-ruch, anty-combat)")
+    public int teleportDelaySeconds = 3;
+
+    @Comment("Cooldown (sek) pomiędzy wysyłaniem kolejnych próśb do tego samego gracza")
+    public int requestCooldownSeconds = 10;
+
+    @Comment("Anuluj TPA jeśli gracz ruszy się podczas odliczania")
+    public boolean cancelOnMove = true;
+
+    @Comment("Anuluj TPA jeśli gracz otrzyma obrażenia podczas odliczania")
+    public boolean cancelOnDamage = true;
 }

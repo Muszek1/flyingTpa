@@ -1,4 +1,4 @@
-package cc.dreamcode.template.profile;
+package cc.dreamcode.tpa.profile;
 
 import eu.okaeri.persistence.repository.DocumentRepository;
 import eu.okaeri.persistence.repository.annotation.DocumentCollection;
