@@ -11,7 +11,7 @@ idea {
 
 allprojects {
     group = "cc.dreamcode.tpa"
-    version = "1.0-beta.1"
+    version = "1.0-beta.2"
 
     apply(plugin = "java-library")
     apply(plugin = "com.gradleup.shadow")
