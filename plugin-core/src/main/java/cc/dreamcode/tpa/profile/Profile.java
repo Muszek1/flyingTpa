@@ -1,21 +1,17 @@
 package cc.dreamcode.tpa.profile;
 
-import eu.okaeri.configs.annotation.CustomKey;
-import eu.okaeri.persistence.document.Document;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.util.UUID;
 
 @Data
-@EqualsAndHashCode(callSuper = false)
-public class Profile extends Document {
-
-    @CustomKey("name")
+public class Profile {
+    private final UUID id;
     private String name;
 
-    public UUID getUniqueId() {
-        return this.getPath().toUUID();
+    public void setName(String profileName) {
+        if (this.name == null) {
+            this.name = profileName;
+        }
     }
-
 }

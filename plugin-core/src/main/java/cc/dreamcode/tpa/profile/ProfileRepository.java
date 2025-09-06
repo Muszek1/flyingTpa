@@ -1,21 +1,22 @@
 package cc.dreamcode.tpa.profile;
 
-import eu.okaeri.persistence.repository.DocumentRepository;
-import eu.okaeri.persistence.repository.annotation.DocumentCollection;
 import lombok.NonNull;
 
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-@DocumentCollection(path = "profiles", keyLength = 36)
-public interface ProfileRepository extends DocumentRepository<UUID, Profile> {
+public class ProfileRepository {
 
-    default Profile findOrCreate(@NonNull UUID uuid, String profileName) {
+    private final Map<UUID, Profile> store = new ConcurrentHashMap<>();
 
-        Profile profile = this.findOrCreateByPath(uuid);
-        if (profileName != null) {
-            profile.setName(profileName);
-        }
-
+    public Profile findOrCreate(@NonNull UUID uuid, String profileName) {
+        Profile profile = store.computeIfAbsent(uuid, Profile::new);
+        if (profileName != null) profile.setName(profileName);
         return profile;
     }
+
+    public Profile get(UUID uuid) { return store.get(uuid); }
+    public void save(@NonNull Profile profile) { store.put(profile.getId(), profile); }
+    public void delete(UUID uuid) { if (uuid != null) store.remove(uuid); }
 }

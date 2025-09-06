@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
@@ -17,235 +18,218 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class TpaService implements Listener {
 
+    private static final long TICKS = 20L;
+
     private final PluginConfig pluginConfig;
     private final MessageConfig messageConfig;
 
     private final Map<UUID, List<TpaRequest>> pendingRequests = new ConcurrentHashMap<>();
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
-
     private final Set<UUID> pendingTeleports = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<UUID, UUID> teleportPartners = new ConcurrentHashMap<>();
 
-
     public void sendTpaRequest(Player sender, Player target, boolean here) {
         if (sender.equals(target)) {
-            this.messageConfig.cannotDoAtMySelf.send(sender);
+            messageConfig.cannotDoAtMySelf.send(sender);
             return;
         }
 
-        List<TpaRequest> toTarget = this.pendingRequests.getOrDefault(target.getUniqueId(), new ArrayList<>());
-        boolean hasDuplicate = toTarget.stream().anyMatch(r -> r.getSender().equals(sender.getUniqueId()));
-        if (hasDuplicate) {
-            this.messageConfig.alreadyPending.send(sender, new MapBuilder<String, Object>()
-                    .put("player", target.getName())
-                    .build());
+        List<TpaRequest> toTarget = listFor(target.getUniqueId());
+        if (toTarget.stream().anyMatch(r -> r.getSender().equals(sender.getUniqueId()))) {
+            messageConfig.alreadyPending.send(sender, map("player", target.getName()));
             return;
         }
 
         String key = sender.getUniqueId() + "-" + target.getUniqueId();
         long now = System.currentTimeMillis();
-        long last = this.cooldowns.getOrDefault(key, 0L);
+        long last = cooldowns.getOrDefault(key, 0L);
         long cdMillis = pluginConfig.requestCooldownSeconds * 1000L;
+
         if (now - last < cdMillis) {
             long sec = (cdMillis - (now - last)) / 1000L;
-            this.messageConfig.onCooldown.send(sender, new MapBuilder<String, Object>()
-                    .put("player", target.getName())
-                    .put("seconds", sec)
-                    .build());
+            messageConfig.onCooldown.send(sender, map("player", target.getName(), "seconds", sec));
             return;
         }
-        this.cooldowns.put(key, now);
+        cooldowns.put(key, now);
 
         TpaRequest request = new TpaRequest(sender.getUniqueId(), target.getUniqueId(), here, now);
-        this.pendingRequests.computeIfAbsent(target.getUniqueId(), u -> new ArrayList<>()).add(request);
+        toTarget.add(request);
 
-        this.messageConfig.requestSent.send(sender, new MapBuilder<String, Object>()
-                .put("target", target.getName()).build());
-
+        messageConfig.requestSent.send(sender, map("target", target.getName()));
         (here ? messageConfig.requestReceivedHere : messageConfig.requestReceivedTo)
-                .send(target, new MapBuilder<String, Object>()
-                        .put("sender", sender.getName()).build());
+                .send(target, map("sender", sender.getName()));
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                List<TpaRequest> list = pendingRequests.getOrDefault(target.getUniqueId(), new ArrayList<>());
-                if (list.remove(request)) {
-                    messageConfig.expired.send(sender, new MapBuilder<String, Object>()
-                            .put("player", target.getName()).build());
-                    messageConfig.expired.send(target, new MapBuilder<String, Object>()
-                            .put("player", sender.getName()).build());
-                }
-            }
-        }.runTaskLater(
-                Bukkit.getPluginManager().getPlugin("Dream-Tpa"),
-                pluginConfig.requestExpireSeconds * 20L
-        );
+        runLater(pluginConfig.requestExpireSeconds * TICKS, () -> expireRequest(target, sender, request));
     }
 
     public void acceptRequest(Player target, Player fromOrNull) {
-        List<TpaRequest> list = this.pendingRequests.getOrDefault(target.getUniqueId(), new ArrayList<>());
+        List<TpaRequest> list = listFor(target.getUniqueId());
         if (list.isEmpty()) {
-            this.messageConfig.noRequests.send(target);
+            messageConfig.noRequests.send(target);
             return;
         }
 
-        TpaRequest request;
-        if (fromOrNull == null) {
-            if (list.size() > 1) {
-                this.messageConfig.usage.send(target, new MapBuilder<String, Object>()
-                        .put("label", "/tpaccept <gracz>").build());
-                return;
-            }
-            request = list.get(0);
-        } else {
-            request = list.stream()
-                    .filter(r -> r.getSender().equals(fromOrNull.getUniqueId()))
-                    .findFirst().orElse(null);
-        }
-
+        TpaRequest request = findRequest(list, fromOrNull);
         if (request == null) {
-            this.messageConfig.noRequests.send(target);
+            if (fromOrNull == null && list.size() > 1) {
+                messageConfig.usage.send(target, map("label", "/tpaccept <gracz>"));
+            } else {
+                messageConfig.noRequests.send(target);
+            }
             return;
         }
 
         Player sender = Bukkit.getPlayer(request.getSender());
         if (sender == null) {
-            list.remove(request);
-            this.messageConfig.playerNotFound.send(target);
+            removeRequest(target.getUniqueId(), request);
+            messageConfig.playerNotFound.send(target);
             return;
         }
 
-        list.remove(request);
-        if (list.isEmpty()) this.pendingRequests.remove(target.getUniqueId());
+        removeRequest(target.getUniqueId(), request);
 
-        int delay = this.pluginConfig.teleportDelaySeconds;
-        this.messageConfig.accepted.send(target, new MapBuilder<String, Object>()
-                .put("seconds", delay).build());
-        this.messageConfig.accepted.send(sender, new MapBuilder<String, Object>()
-                .put("seconds", delay).build());
+        int delay = pluginConfig.teleportDelaySeconds;
+        messageConfig.accepted.send(target, map("seconds", delay));
+        messageConfig.accepted.send(sender, map("seconds", delay));
 
         final Player teleporter = request.isHere() ? target : sender;
         final Player destination = request.isHere() ? sender : target;
 
         if (delay <= 0) {
             performTeleport(teleporter, destination);
-            this.messageConfig.teleported.send(target);
-            this.messageConfig.teleported.send(sender);
+            messageConfig.teleported.send(target);
+            messageConfig.teleported.send(sender);
             return;
         }
 
-        this.pendingTeleports.add(teleporter.getUniqueId());
-        this.teleportPartners.put(teleporter.getUniqueId(), destination.getUniqueId());
+        pendingTeleports.add(teleporter.getUniqueId());
+        teleportPartners.put(teleporter.getUniqueId(), destination.getUniqueId());
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!pendingTeleports.remove(teleporter.getUniqueId())) return;
-                teleportPartners.remove(teleporter.getUniqueId());
-
-                performTeleport(teleporter, destination);
-                messageConfig.teleported.send(target);
-                messageConfig.teleported.send(sender);
-            }
-        }.runTaskLater(
-                Bukkit.getPluginManager().getPlugin("Dream-Tpa"),
-                delay * 20L
-        );
+        runLater(delay * TICKS, () -> {
+            if (!pendingTeleports.remove(teleporter.getUniqueId())) return;
+            teleportPartners.remove(teleporter.getUniqueId());
+            performTeleport(teleporter, destination);
+            messageConfig.teleported.send(target);
+            messageConfig.teleported.send(sender);
+        });
     }
 
     public void denyRequest(Player target, Player fromOrNull) {
-        List<TpaRequest> list = this.pendingRequests.getOrDefault(target.getUniqueId(), new ArrayList<>());
+        List<TpaRequest> list = listFor(target.getUniqueId());
         if (list.isEmpty()) {
-            this.messageConfig.noRequests.send(target);
-            return;
-        }
-        TpaRequest request;
-        if (fromOrNull == null) {
-            if (list.size() > 1) {
-                this.messageConfig.usage.send(target, new MapBuilder<String, Object>()
-                        .put("label", "/tpdeny <gracz>").build());
-                return;
-            }
-            request = list.get(0);
-        } else {
-            request = list.stream()
-                    .filter(r -> r.getSender().equals(fromOrNull.getUniqueId()))
-                    .findFirst().orElse(null);
-        }
-        if (request == null) {
-            this.messageConfig.noRequests.send(target);
+            messageConfig.noRequests.send(target);
             return;
         }
 
-        list.remove(request);
-        if (list.isEmpty()) this.pendingRequests.remove(target.getUniqueId());
+        TpaRequest request = findRequest(list, fromOrNull);
+        if (request == null) {
+            if (fromOrNull == null && list.size() > 1) {
+                messageConfig.usage.send(target, map("label", "/tpdeny <gracz>"));
+            } else {
+                messageConfig.noRequests.send(target);
+            }
+            return;
+        }
+
+        removeRequest(target.getUniqueId(), request);
 
         Player sender = Bukkit.getPlayer(request.getSender());
         if (sender != null) {
-            this.messageConfig.wasDenied.send(sender, new MapBuilder<String, Object>()
-                    .put("player", target.getName()).build());
+            messageConfig.wasDenied.send(sender, map("player", target.getName()));
         }
-        this.messageConfig.denied.send(target, new MapBuilder<String, Object>()
-                .put("player", sender != null ? sender.getName() : "???").build());
+        messageConfig.denied.send(target, map("player", sender != null ? sender.getName() : "???"));
     }
 
     public void cancelRequest(Player sender, Player targetOrNull) {
         UUID senderId = sender.getUniqueId();
 
         if (targetOrNull == null) {
-            boolean anyOutgoing = this.pendingRequests.values().stream()
-                    .flatMap(List::stream)
+            boolean any = pendingRequests.values().stream().flatMap(List::stream)
                     .anyMatch(r -> r.getSender().equals(senderId));
-            if (!anyOutgoing) {
-                this.messageConfig.noOutgoing.send(sender);
+            if (!any) {
+                messageConfig.noOutgoing.send(sender);
                 return;
             }
-
-            this.pendingRequests.values().forEach(list -> list.removeIf(r -> r.getSender().equals(senderId)));
-            this.messageConfig.youCancelled.send(sender, new MapBuilder<String, Object>()
-                    .put("player", "*").build());
+            pendingRequests.values().forEach(list -> list.removeIf(r -> r.getSender().equals(senderId)));
+            messageConfig.youCancelled.send(sender, map("player", "*"));
             return;
         }
 
-        List<TpaRequest> list = this.pendingRequests.getOrDefault(targetOrNull.getUniqueId(), new ArrayList<>());
-        boolean removedAny = list.removeIf(r -> r.getSender().equals(senderId));
-        if (list.isEmpty()) this.pendingRequests.remove(targetOrNull.getUniqueId());
+        List<TpaRequest> list = listFor(targetOrNull.getUniqueId());
+        boolean removed = list.removeIf(r -> r.getSender().equals(senderId));
+        if (list.isEmpty()) pendingRequests.remove(targetOrNull.getUniqueId());
 
-        if (!removedAny) {
-            this.messageConfig.noOutgoing.send(sender);
+        if (!removed) {
+            messageConfig.noOutgoing.send(sender);
             return;
         }
 
-        this.messageConfig.youCancelled.send(sender, new MapBuilder<String, Object>()
-                .put("player", targetOrNull.getName()).build());
-        this.messageConfig.theyCancelled.send(targetOrNull, new MapBuilder<String, Object>()
-                .put("player", sender.getName()).build());
+        messageConfig.youCancelled.send(sender, map("player", targetOrNull.getName()));
+        messageConfig.theyCancelled.send(targetOrNull, map("player", sender.getName()));
     }
 
     public boolean isTeleportPending(Player player) {
-        return this.pendingTeleports.contains(player.getUniqueId());
+        return pendingTeleports.contains(player.getUniqueId());
     }
 
     public void cancelPendingTeleport(Player teleporter, boolean byMove) {
         UUID id = teleporter.getUniqueId();
-        if (this.pendingTeleports.remove(id)) {
-            UUID partnerId = this.teleportPartners.remove(id);
+        if (!pendingTeleports.remove(id)) return;
 
-            if (byMove) this.messageConfig.movedCancel.send(teleporter);
-            else this.messageConfig.damagedCancel.send(teleporter);
+        UUID partnerId = teleportPartners.remove(id);
+        if (byMove) messageConfig.movedCancel.send(teleporter);
+        else messageConfig.damagedCancel.send(teleporter);
 
-            if (partnerId != null) {
-                Player partner = Bukkit.getPlayer(partnerId);
-                if (partner != null) this.messageConfig.cancelled.send(partner);
-            }
+        if (partnerId != null) {
+            Player partner = Bukkit.getPlayer(partnerId);
+            if (partner != null) messageConfig.cancelled.send(partner);
         }
     }
 
+    private void expireRequest(Player target, Player sender, TpaRequest request) {
+        List<TpaRequest> list = listFor(target.getUniqueId());
+        if (list.remove(request)) {
+            if (list.isEmpty()) pendingRequests.remove(target.getUniqueId());
+            messageConfig.expired.send(sender, map("player", target.getName()));
+            messageConfig.expired.send(target, map("player", sender.getName()));
+        }
+    }
 
     private void performTeleport(Player teleporter, Player destination) {
         if (teleporter == null || destination == null) return;
         if (!teleporter.isOnline() || !destination.isOnline()) return;
         teleporter.teleport(destination.getLocation());
+    }
+
+    private List<TpaRequest> listFor(UUID targetId) {
+        return pendingRequests.computeIfAbsent(targetId, u -> new ArrayList<>());
+    }
+
+    private void removeRequest(UUID targetId, TpaRequest req) {
+        List<TpaRequest> list = listFor(targetId);
+        list.remove(req);
+        if (list.isEmpty()) pendingRequests.remove(targetId);
+    }
+
+    private TpaRequest findRequest(List<TpaRequest> list, Player fromOrNull) {
+        if (fromOrNull == null) return list.size() == 1 ? list.get(0) : null;
+        UUID fromId = fromOrNull.getUniqueId();
+        for (TpaRequest r : list) if (r.getSender().equals(fromId)) return r;
+        return null;
+    }
+
+    private Map<String, Object> map(Object... kv) {
+        MapBuilder<String, Object> b = new MapBuilder<>();
+        for (int i = 0; i + 1 < kv.length; i += 2) b.put(String.valueOf(kv[i]), kv[i + 1]);
+        return b.build();
+    }
+
+    private void runLater(long ticks, Runnable task) {
+        new BukkitRunnable() { @Override public void run() { task.run(); } }
+                .runTaskLater(plugin(), ticks);
+    }
+
+    private Plugin plugin() {
+        return Bukkit.getPluginManager().getPlugin("Dream-Tpa");
     }
 }

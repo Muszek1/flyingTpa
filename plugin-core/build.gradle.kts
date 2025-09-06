@@ -17,7 +17,6 @@ dependencies {
     //implementation("cc.dreamcode.platform:bukkit-hook:1.13.6")
     implementation("cc.dreamcode.platform:bukkit-config:1.13.6")
     implementation("cc.dreamcode.platform:dream-command:1.13.6")
-    implementation("cc.dreamcode.platform:persistence:1.13.6")
 
     // -- dream-utilties --
     implementation("cc.dreamcode:utilities-adventure:1.5.7")
@@ -51,13 +50,6 @@ tasks.withType<ShadowJar> {
     relocate("cc.dreamcode.menu", "cc.dreamcode.tpa.libs.cc.dreamcode.menu")
     relocate("cc.dreamcode.command", "cc.dreamcode.tpa.libs.cc.dreamcode.command")
     relocate("cc.dreamcode.notice", "cc.dreamcode.tpa.libs.cc.dreamcode.notice")
-
-    relocate("org.bson", "cc.dreamcode.tpa.libs.org.bson")
-    relocate("com.mongodb", "cc.dreamcode.tpa.libs.com.mongodb")
-    relocate("com.zaxxer", "cc.dreamcode.tpa.libs.com.zaxxer")
-    relocate("org.slf4j", "cc.dreamcode.tpa.libs.org.slf4j")
-    relocate("org.json", "cc.dreamcode.tpa.libs.org.json")
-    relocate("com.google.gson", "cc.dreamcode.tpa.libs.com.google.gson")
 
 
     transform(PropertiesFileTransformer::class.java) {
