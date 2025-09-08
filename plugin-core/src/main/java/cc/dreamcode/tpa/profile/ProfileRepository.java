@@ -17,6 +17,5 @@ public class ProfileRepository {
     }
 
     public Profile get(UUID uuid) { return store.get(uuid); }
-    public void save(@NonNull Profile profile) { store.put(profile.getId(), profile); }
     public void delete(UUID uuid) { if (uuid != null) store.remove(uuid); }
 }

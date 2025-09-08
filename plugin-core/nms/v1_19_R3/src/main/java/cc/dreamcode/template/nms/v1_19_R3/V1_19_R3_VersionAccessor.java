@@ -1,7 +1,0 @@
-package cc.dreamcode.tpa.nms.v1_19_R3;
-
-import cc.dreamcode.tpa.nms.api.VersionAccessor;
-
-public class V1_19_R3_VersionAccessor implements VersionAccessor {
-
-}
